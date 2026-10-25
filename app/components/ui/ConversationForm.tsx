@@ -1,177 +1,202 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
+import Image from "next/image";
+import { useState, type FormEvent, type ReactNode } from "react";
 
-const links = [
-  { label: "Home", href: "#home" },
-  { label: "About", href: "#about" },
-  { label: "Skills", href: "#skills" },
-  { label: "Projects", href: "#projects" },
-  { label: "Experience", href: "#experience" },
-  { label: "Contact", href: "#contact" },
-];
+const topics = [
+  "Frontend development",
+  "Full-stack app",
+  "UI implementation",
+  "Something else",
+] as const;
 
-export default function Navbar() {
-  const [activeHash, setActiveHash] = useState("#home");
-  const [menuOpen, setMenuOpen] = useState(false);
+const stages = ["New build", "Redesign", "Add features", "Fix bugs", "Not sure yet"] as const;
 
-  useEffect(() => {
-    const sections = links
-      .map(({ href }) => document.querySelector(href))
-      .filter((section): section is Element => section !== null);
+type Status = "idle" | "sending" | "sent" | "error";
 
-    if (!sections.length) return;
+interface FormState {
+  topic: (typeof topics)[number] | "";
+  message: string;
+  budget: (typeof stages)[number] | "";
+  name: string;
+  email: string;
+}
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visibleSections = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort(
-            (a, b) =>
-              a.boundingClientRect.top - b.boundingClientRect.top
-          );
+const initial: FormState = { topic: "", message: "", budget: "", name: "", email: "" };
 
-        if (visibleSections.length > 0) {
-          const hash = `#${visibleSections[0].target.id}`;
+function Chip({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={`rounded-full border px-space-md py-space-sm text-label-lg transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary-container ${
+        active
+          ? "border-on-primary bg-secondary-container text-on-primary-fixed"
+          : "border-on-primary-container text-inverse-on-surface hover:border-inverse-primary"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
 
-          setActiveHash(hash);
+const field = 
+  "w-full rounded-lg border border-inverse-on-surface bg-primary-container px-space-md py-space-md text-body-md text-inverse-on-surface placeholder:text-background transition-all focus:border-on-t focus:outline-none focus:ring-2 focus:ring-secondary-container"
 
-          // Update the URL without adding a history entry
-          if (window.location.hash !== hash) {
-            window.history.replaceState(null, "", hash);
-          }
-        }
-      },
-      {
-        root: null,
-        rootMargin: "-20% 0px -65% 0px",
-        threshold: 0,
+const legend = "mb-space-md block text-headline-sm";
+
+export default function ConversationForm() {
+  const [form, setForm] = useState<FormState>(initial);
+  const [status, setStatus] = useState<Status>("idle");
+  const [error, setError] = useState("");
+
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((f) => ({ ...f, [key]: value }));
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setStatus("sending");
+    setError("");
+
+    try {
+      const res = await fetch("/api/conversation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+
+      const text = await res.text();
+      let data: { error?: string } = {};
+      try {
+        data = JSON.parse(text);
+      } catch {
+        // server returned HTML, not JSON
       }
+
+      if (!res.ok) throw new Error(data.error ?? `Server error (${res.status}).`);
+      setStatus("sent");
+      setForm(initial);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setStatus("error");
+    }
+  }
+
+  if (status === "sent") {
+    return (
+      <div role="status" className="py-space-xl text-center">
+        <p className="text-headline-md">Message sent.</p>
+        <p className="mx-auto mt-space-md max-w-sm text-body-md text-inverse-primary">
+          Thanks for reaching out. I&apos;ll reply within 24 hours.
+        </p>
+        <button
+          onClick={() => setStatus("idle")}
+          className="mt-space-lg rounded-full bg-secondary-container px-space-lg py-space-md text-label-lg text-on-secondary-container transition hover:bg-secondary-fixed-dim"
+        >
+          Send another message
+        </button>
+      </div>
     );
-
-    sections.forEach((section) => observer.observe(section));
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Close the mobile menu on Escape
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setMenuOpen(false);
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [menuOpen]);
+  }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-surface/90 backdrop-blur-md shadow-[0_1px_8px_rgba(43,25,14,0.06)]">
-      <div className="h-20 w-full px-margin md:px-margin-md lg:px-margin-lg flex items-center justify-between">
-        {/* Brand */}
-        <Link href="#home" className="flex items-center gap-space-sm">
-          <div className="w-9 h-9 rounded-lg bg-primary-container text-secondary-container flex items-center justify-center font-bold text-base tracking-tighter shadow-sm">
-            MA
-          </div>
+    <form onSubmit={onSubmit} className="space-y-space-xl">
+      <div className="absolute bottom-60 right-50 w-64 h-64 rounded-full bg-secondary-container/10 blur-3xl pointer-events-none" />
 
-          <div className="flex flex-col">
-            <span className="text-label-lg text-on-surface leading-tight tracking-tight font-bold">
-              MA
-            </span>
+      <div className="w-full flex justify-center items-center">
+        <Image src="/Logo.png" width={128} height={128} className="w-16 h-16 rounded-lg pointer-events-none select-none drop-shadow-[0_8px_18px_rgba(255,222,168,0.25)]" alt="Mohamed Abobakr Logo" />
+      </div>
+      <fieldset>
+        <legend className={legend}>What do you need help with?</legend>
+        <div className="flex flex-wrap gap-space-sm">
+          {topics.map((t) => (
+            <Chip key={t} active={form.topic === t} onClick={() => set("topic", t)}>
+              {t}
+            </Chip>
+          ))}
+        </div>
+      </fieldset>
 
-            <span className="text-label-technical text-on-surface-variant uppercase tracking-wider">
-              Full-Stack Developer
-            </span>
-          </div>
-        </Link>
+      <div>
+        <label htmlFor="message" className={legend}>
+          Tell me about your project
+        </label>
+        <textarea
+          id="message"
+          required
+          minLength={20}
+          rows={5}
+          value={form.message}
+          onChange={(e) => set("message", e.target.value)}
+          placeholder="What are you building, who is it for, and when do you need it?"
+          className={field}
+        />
+      </div>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-1 xl:gap-gutter" aria-label="Main navigation">
-          {links.map((link) => {
-            const isActive = activeHash === link.href;
+      <fieldset>
+        <legend className={legend}>Project stage</legend>
+        <div className="flex flex-wrap gap-space-sm">
+          {stages.map((b) => (
+            <Chip key={b} active={form.budget === b} onClick={() => set("budget", b)}>
+              {b}
+            </Chip>
+          ))}
+        </div>
+      </fieldset>
 
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                aria-current={isActive ? "location" : undefined}
-                className={`text-label-lg px-space-md py-space-sm rounded-lg transition-colors ${
-                  isActive
-                    ? "bg-primary-container text-on-primary font-bold shadow-sm"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Contact CTA */}
-        <div className="flex items-center gap-space-xs md:gap-space-md">
-          <Link href="/conversation" className="inline-flex items-center justify-center bg-secondary-container text-primary-container text-label-lg px-space-md py-space-sm rounded-lg shadow-[0_4px_12px_-2px_rgba(43,25,14,0.08)] hover:bg-secondary-fixed-dim transition-all hover:-translate-y-0.5 font-bold">
-            Let&apos;s Talk
-          </Link>
-
-          <div className="flex lg:hidden h-16 items-center justify-between gap-space-sm">
-            <div className="flex items-center gap-space-xs">
-              <button
-                type="button"
-                aria-label={menuOpen ? "Close Navigation Menu" : "Open Navigation Menu"}
-                aria-expanded={menuOpen}
-                aria-controls="mobile-menu"
-                onClick={() => setMenuOpen((open) => !open)}
-                className="w-11 h-11 rounded-lg flex items-center justify-center text-on-surface hover:bg-surface-variant active:scale-95 transition-all"
-                id="menu-open-btn"
-              >
-                <span className="material-symbols-outlined text-[28px]">
-                  {menuOpen ? "close" : "menu"}
-                </span>
-              </button>
-            </div>
-          </div>
-
-          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center" aria-hidden="true">
-            <span className="material-symbols-outlined text-on-primary text-[18px]">
-              person
-            </span>
-          </div>
+      <div className="grid gap-gutter sm:grid-cols-2">
+        <div>
+          <label htmlFor="name" className="mb-space-sm block text-label-lg">
+            Your name
+          </label>
+          <input
+            id="name"
+            required
+            autoComplete="name"
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            placeholder="Mohamed Abobakr"
+            className={field}
+          />
+        </div>
+        <div>
+          <label htmlFor="email" className="mb-space-sm block text-label-lg">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            required
+            autoComplete="email"
+            value={form.email}
+            onChange={(e) => set("email", e.target.value)}
+            placeholder="mohamed.dev.m@gmail.com"
+            className={field}
+          />
         </div>
       </div>
 
-      {/* Mobile Navigation */}
-      {menuOpen && (
-        <nav
-          id="mobile-menu"
-          aria-label="Mobile navigation"
-          className="lg:hidden absolute top-full left-0 right-0 bg-surface shadow-[0_8px_16px_-4px_rgba(43,25,14,0.12)] px-margin md:px-margin-md py-space-md"
+      {status === "error" && (
+        <p
+          role="alert"
+          className="rounded-lg bg-error-container px-space-md py-space-md text-label-lg text-on-error-container"
         >
-          <ul className="flex flex-col gap-space-xs">
-            {links.map((link) => {
-              const isActive = activeHash === link.href;
-
-              return (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    onClick={() => setMenuOpen(false)}
-                    aria-current={isActive ? "location" : undefined}
-                    className={`block text-label-lg px-space-md py-space-sm rounded-lg transition-colors ${
-                      isActive
-                        ? "bg-primary-container text-on-primary font-bold shadow-sm"
-                        : "text-on-surface-variant hover:text-on-surface hover:bg-surface-variant"
-                    }`}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+          {error} Check your details and try again.
+        </p>
       )}
-    </header>
+
+      <button type="submit" disabled={status === "sending"} className="w-full rounded-full bg-secondary-container px-space-xl py-space-md text-label-lg text-primary-container shadow-warm transition hover:bg-secondary-fixed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-inverse-on-surface disabled:opacity-60 sm:w-auto">
+        {status === "sending" ? "Sending…" : "Send message"}
+      </button>
+    </form>
   );
 }
