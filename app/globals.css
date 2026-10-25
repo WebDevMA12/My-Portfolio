@@ -4,6 +4,8 @@
   THEME — Warm Editorial Tech
 ======================================== */
 @theme {
+  --breakpoint-2xl: 1440px;
+
   /* Surfaces */
   --color-background: #FFF8F1;
   --color-surface: #FFF8F1;
@@ -183,7 +185,7 @@
     cursor: pointer;
   }
 
-.material-symbols-about {
+.material-symbols {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
   font-style: normal;

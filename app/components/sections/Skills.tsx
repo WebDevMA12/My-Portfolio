@@ -188,7 +188,7 @@ function SkillConnectors() {
   return (
     <svg
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-20 hidden h-full w-full lg:block"
+      className="pointer-events-none absolute inset-0 z-20 hidden h-full w-full xl:block"
       viewBox="0 0 1000 660"
       preserveAspectRatio="none"
       fill="none"

@@ -8,7 +8,7 @@ export default function Services() {
             What I Do
           </span>
 
-          <h2 className="text-headline-lg text-primary tracking-tight">
+          <h2 className="text-headline-md lg:text-headline-lg text-primary tracking-tight">
             From Idea to Implementation.
           </h2>
 

@@ -119,7 +119,7 @@ export default function About() {
                   </p>
                 </div>
 
-                <span className={`material-symbols-about ${metric.iconStyle}`} aria-hidden="true">
+                <span className={`material-symbols ${metric.iconStyle}`} aria-hidden="true">
                   {metric.icon}
                 </span>
               </div>
